@@ -1,0 +1,39 @@
+package com.pluralsight;
+
+
+import java.sql.*;
+
+public class Main {
+    public static void main(String[] args) throws ClassNotFoundException, SQLException {
+//        Connection to the sakila database
+        // information to connect to the database
+        String connectionString = "jdbc:mysql://localhost:3306/sakila";
+        String username = "root";
+        String password = "yearup";
+
+        // load the MySQL driver
+        Class.forName("com.mysql.cj.jdbc.Driver");
+
+        // open a connection to the database
+        // use database URL to point to correct database
+        Connection connection;
+        connection = DriverManager.getConnection(connectionString, username, password);
+
+        // create statement
+        // the statement is tied to the open connection
+        Statement statement = connection.createStatement();
+
+        // define your query
+        String query = "SELECT city FROM city " +
+                "WHERE country_id = 103;";
+
+        // execute query
+        ResultSet results = statement.executeQuery(query);
+
+        // process the results
+        while (results.next()){
+            String city = results.getString("city");
+            System.out.println(city);
+        }
+    }
+}
