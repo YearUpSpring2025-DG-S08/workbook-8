@@ -34,5 +34,8 @@ public class Main {
             String product = results.getString("ProductName");
             System.out.println(product);
         }
+        
+        // close the connection
+        connection.close();
     }
 }
