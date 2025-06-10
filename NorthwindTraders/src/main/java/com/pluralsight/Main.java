@@ -6,7 +6,7 @@ import java.util.Scanner;
 
 public class Main {
     private static final Scanner s = new Scanner(System.in);
-    private static sqlConnectionInfo sqlConnectionInfo;
+    private static BasicDataSource basicDataSource;
 
     public static void main(String[] args) {
 
@@ -18,7 +18,7 @@ public class Main {
             System.exit(1);
         }
 
-        sqlConnectionInfo = getSqlConnectionInfo(args);
+        basicDataSource = getBasicDataSourceFromArgs(args);
 
         try {
             userDefinedQuery();
@@ -28,12 +28,12 @@ public class Main {
     }
 
 
-    private static sqlConnectionInfo getSqlConnectionInfo(String[] args) {
+    private static BasicDataSource getBasicDataSourceFromArgs(String[] args) {
         String username = args[0];
         String password = args[1];
         String connectionString = args[2];
 
-        return new sqlConnectionInfo(connectionString, username, password);
+        return new BasicDataSource(connectionString, username, password);
     }
 
     private static void userDefinedQuery() throws SQLException {
@@ -69,9 +69,9 @@ public class Main {
             // open a connection to the database
             // use database URL to point to correct database
             connection = DriverManager.getConnection(
-                    sqlConnectionInfo.getConnectionString(),
-                    sqlConnectionInfo.getUsername(),
-                    sqlConnectionInfo.getPassword());
+                    basicDataSource.getConnectionString(),
+                    basicDataSource.getUsername(),
+                    basicDataSource.getPassword());
 
             String query = "SELECT ProductID, ProductName, QuantityPerUnit, UnitPrice FROM products";
 
@@ -121,15 +121,13 @@ public class Main {
         ResultSet results = null;
 
         try {
-            // load for MySQL drive
-            Class.forName("com.mysql.cj.jdbc.Driver");
 
             // open a connection to the database
             // use database URL to point to correct database
             connection = DriverManager.getConnection(
-                    sqlConnectionInfo.getConnectionString(),
-                    sqlConnectionInfo.getUsername(),
-                    sqlConnectionInfo.getPassword());
+                    basicDataSource.getConnectionString(),
+                    basicDataSource.getUsername(),
+                    basicDataSource.getPassword());
 
             String query = "SELECT ContactName, CompanyName, City, Country, Phone FROM customers";
 
@@ -183,10 +181,7 @@ public class Main {
             Class.forName("com.mysql.cj.jdbc.Driver");
 
             // open the resources for connection, statement, and results
-            try (Connection connection = DriverManager.getConnection(
-                    sqlConnectionInfo.getConnectionString(),
-                    sqlConnectionInfo.getUsername(),
-                    sqlConnectionInfo.getPassword());
+            try (Connection connection = basicDataSource.getConnection();
 
                  // create a statement that uses the open connection to pass the query
                  PreparedStatement ps = connection.prepareStatement("SELECT CategoryID, CategoryName FROM categories " +

@@ -1,5 +1,9 @@
 package com.pluralsight;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
 public class BasicDataSource {
     private String connectionString;
     private String username;
@@ -34,4 +38,23 @@ public class BasicDataSource {
     public void setPassword(String password) {
         this.password = password;
     }
+    
+    public Connection getConnection() throws SQLException {
+        try
+        {
+            // load for MySQL drive
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            return DriverManager.getConnection(
+                    this.getConnectionString(),
+                    this.getUsername(),
+                    this.getPassword());
+            
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+    
+    
 }
