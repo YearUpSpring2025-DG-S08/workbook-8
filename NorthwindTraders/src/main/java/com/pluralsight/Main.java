@@ -1,6 +1,8 @@
 package com.pluralsight;
 
 
+import org.apache.commons.dbcp2.BasicDataSource;
+
 import java.sql.*;
 import java.util.Scanner;
 
@@ -32,8 +34,13 @@ public class Main {
         String username = args[0];
         String password = args[1];
         String connectionString = args[2];
+        
+        BasicDataSource dataSource = new BasicDataSource();
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
+        dataSource.setUrl(connectionString);
 
-        return new BasicDataSource(connectionString, username, password);
+        return dataSource;
     }
 
     private static void userDefinedQuery() throws SQLException {
@@ -68,10 +75,7 @@ public class Main {
 
             // open a connection to the database
             // use database URL to point to correct database
-            connection = DriverManager.getConnection(
-                    basicDataSource.getConnectionString(),
-                    basicDataSource.getUsername(),
-                    basicDataSource.getPassword());
+            connection = basicDataSource.getConnection();
 
             String query = "SELECT ProductID, ProductName, QuantityPerUnit, UnitPrice FROM products";
 
@@ -116,28 +120,14 @@ public class Main {
     }
 
     private static void displayCustomers() throws SQLException {
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet results = null;
 
-        try {
-
-            // open a connection to the database
-            // use database URL to point to correct database
-            connection = DriverManager.getConnection(
-                    basicDataSource.getConnectionString(),
-                    basicDataSource.getUsername(),
-                    basicDataSource.getPassword());
-
-            String query = "SELECT ContactName, CompanyName, City, Country, Phone FROM customers";
-
-            statement = connection.prepareStatement(query);
-
-
-            // execute query
-            if (statement != null) {
-                results = statement.executeQuery(query);
-            }
+        try ( // open a connection to the database
+              // use database URL to point to correct database
+              Connection connection = basicDataSource.getConnection();
+              PreparedStatement ps = connection.prepareStatement("SELECT ContactName, CompanyName, City, Country, Phone FROM customers");
+              // execute query
+              ResultSet results = ps.executeQuery();)
+        {
 
             // process the results
             if (results != null) {
@@ -160,92 +150,68 @@ public class Main {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (results != null) {
-                results.close();
-            }
-            if (statement != null) {
-                statement.close();
-            }
-            if (connection != null) {
-                connection.close();
-            }
-        }
+        } 
+        
+        
     }
 
     private static void displayCategories() {
-        // load mySQL drive
 
-        try
-        {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+        // open the resources for connection, statement, and results
+        try (Connection connection = basicDataSource.getConnection();
+             // create a statement that uses the open connection to pass the query
+             PreparedStatement ps = connection.prepareStatement("SELECT CategoryID, CategoryName FROM categories " +
+                     "ORDER BY categoryID ASC");
+             ResultSet results = ps.executeQuery();
 
-            // open the resources for connection, statement, and results
-            try (Connection connection = basicDataSource.getConnection();
+        ) {
 
-                 // create a statement that uses the open connection to pass the query
-                 PreparedStatement ps = connection.prepareStatement("SELECT CategoryID, CategoryName FROM categories " +
-                         "ORDER BY categoryID ASC"))
-            {
+            while (results.next()) {
+                int categoryID = results.getInt("CategoryID");
+                String categoryName = results.getString("CategoryName");
 
-                try (ResultSet results = ps.executeQuery())
-                {
-                    while(results.next())
-                    {
-                        int categoryID = results.getInt("CategoryID");
-                        String categoryName = results.getString("CategoryName");
-
-                        System.out.printf("""
-                                CategoryID: %d
-                                CategoryName: %s
-                                -------------------------
-                                """, categoryID, categoryName);
-                    }
-                }
-
-
-                // prompt user to choose a categoryID to display its products
-                PreparedStatement ps2 = connection.prepareStatement("SELECT CategoryID, ProductName, UnitPrice, UnitsInStock FROM products " +
-                        "WHERE categoryID = ?");
-
-                int userDefinedCategoryID = userDefineCategorySearch();
-                ps2.setInt(1, userDefinedCategoryID);
-                
-                try (ResultSet results2 = ps2.executeQuery())
-                {
-                    while(results2.next())
-                    {
-                        int categoryID = results2.getInt("CategoryID");
-                        String productName = results2.getString("ProductName");
-                        int unitPrice = results2.getInt("UnitPrice");
-                        int unitsInStock = results2.getInt("UnitsInStock");
-
-                        System.out.printf("""
-                                CategoryID: %d
-                                Product Name: %s
-                                Unit Price: %d
-                                UnitsInStock: %d
-                                -------------------------
-                                """, userDefinedCategoryID, productName, unitPrice, unitsInStock);
-                    }
-                } catch (SQLException sql)
-                {
-                    sql.printStackTrace();
-                }
-
-
-            } catch (SQLException e)
-            {
-                e.printStackTrace();
+                System.out.printf("""
+                        CategoryID: %d
+                        CategoryName: %s
+                        -------------------------
+                        """, categoryID, categoryName);
             }
-            
-            
-        } catch (ClassNotFoundException ex) {
-            ex.printStackTrace();
+
+
+            // prompt user to choose a categoryID to display its products
+            PreparedStatement ps2 = connection.prepareStatement("SELECT CategoryID, ProductName, UnitPrice, UnitsInStock FROM products " +
+                    "WHERE categoryID = ?");
+
+            int userDefinedCategoryID = userDefineCategorySearch();
+            ps2.setInt(1, userDefinedCategoryID);
+
+            try (ResultSet results2 = ps2.executeQuery()) {
+                while (results2.next()) {
+                    int categoryID = results2.getInt("CategoryID");
+                    String productName = results2.getString("ProductName");
+                    int unitPrice = results2.getInt("UnitPrice");
+                    int unitsInStock = results2.getInt("UnitsInStock");
+
+                    System.out.printf("""
+                            CategoryID: %d
+                            Product Name: %s
+                            Unit Price: %d
+                            UnitsInStock: %d
+                            -------------------------
+                            """, userDefinedCategoryID, productName, unitPrice, unitsInStock);
+                }
+            } catch (SQLException sql) {
+                sql.printStackTrace();
+            }
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         
-        
+
     }
+        
     
     private static int userDefineCategorySearch(){
         System.out.print("Choose a CategoryID to display its products: ");
