@@ -1,11 +1,11 @@
 package com.pluralsight;
 
-public class sqlConnectionInfo {
+public class BasicDataSource {
     private String connectionString;
     private String username;
     private String password;
 
-    public sqlConnectionInfo(String connectionString, String username, String password) {
+    public BasicDataSource(String connectionString, String username, String password) {
         this.connectionString = connectionString;
         this.username = username;
         this.password = password;

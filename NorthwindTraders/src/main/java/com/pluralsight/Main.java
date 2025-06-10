@@ -5,10 +5,12 @@ import java.sql.*;
 import java.util.Scanner;
 
 public class Main {
+    private static final Scanner s = new Scanner(System.in);
     private static sqlConnectionInfo sqlConnectionInfo;
+
     public static void main(String[] args) {
-      
-        if(args.length != 3){
+
+        if (args.length != 3) {
             System.out.println(
                     "Application needs three arguments to run" +
                             "java.com.pluralsight.Main <username> <password> <sqlURL>"
@@ -24,41 +26,42 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
-    
-    private static sqlConnectionInfo getSqlConnectionInfo(String[] args){
+
+
+    private static sqlConnectionInfo getSqlConnectionInfo(String[] args) {
         String username = args[0];
         String password = args[1];
         String connectionString = args[2];
-        
+
         return new sqlConnectionInfo(connectionString, username, password);
     }
-    
+
     private static void userDefinedQuery() throws SQLException {
-        Scanner s = new Scanner(System.in);
         // prompt user to choose query
         System.out.println("""
-                    What data would you like to choose?
-                    [1] Display all products
-                    [2] Display all customers
-                    [0] Exit
-                    """);
+                What data would you like to choose?
+                [1] Display all Products
+                [2] Display all Customers
+                [3] Display all Categories
+                [0] Exit
+                """);
 
         int queryChoice = s.nextInt();
 
-        switch (queryChoice){
+        switch (queryChoice) {
             case 1 -> displayProducts();
             case 2 -> displayCustomers();
-            case 0 -> {
-                System.out.println("Exiting Application..."); break;}
+            case 3 -> displayCategories();
+            case 0 -> System.out.println("Exiting Application...");
             default -> System.out.println("Invalid entry. Try again.");
         }
     }
-        
+
     private static void displayProducts() throws SQLException {
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet results = null;
-        
+
         try {
             // load for MySQL drive
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -69,39 +72,37 @@ public class Main {
                     sqlConnectionInfo.getConnectionString(),
                     sqlConnectionInfo.getUsername(),
                     sqlConnectionInfo.getPassword());
-            
+
             String query = "SELECT ProductID, ProductName, QuantityPerUnit, UnitPrice FROM products";
 
             statement = connection.prepareStatement(query);
-            
-            
+
+
             // execute query
             if (statement != null) {
                 results = statement.executeQuery(query);
             }
 
             if (results != null) {
-                while(results.next()){
+                while (results.next()) {
                     int ProductID = results.getInt("ProductID");
                     String ProductName = results.getString("ProductName");
                     String QuantityPerUnit = results.getString("QuantityPerUnit");
                     int UnitPrice = results.getInt("UnitPrice");
 
                     System.out.printf("""
-                ProductID: %s
-                ProductName: %s
-                Quantity Per Unit: %s
-                Unit Price: %d
-                ----------------
-                """,ProductID, ProductName, QuantityPerUnit, UnitPrice);
+                            ProductID: %s
+                            ProductName: %s
+                            Quantity Per Unit: %s
+                            Unit Price: %d
+                            ----------------
+                            """, ProductID, ProductName, QuantityPerUnit, UnitPrice);
                 }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-        }
-        
-        finally {
+        } finally {
             if (results != null) {
                 results.close();
             }
@@ -113,7 +114,7 @@ public class Main {
             }
         }
     }
-    
+
     private static void displayCustomers() throws SQLException {
         Connection connection = null;
         PreparedStatement statement = null;
@@ -161,8 +162,7 @@ public class Main {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             if (results != null) {
                 results.close();
             }
@@ -174,4 +174,88 @@ public class Main {
             }
         }
     }
+
+    private static void displayCategories() {
+        // load mySQL drive
+
+        try
+        {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            // open the resources for connection, statement, and results
+            try (Connection connection = DriverManager.getConnection(
+                    sqlConnectionInfo.getConnectionString(),
+                    sqlConnectionInfo.getUsername(),
+                    sqlConnectionInfo.getPassword());
+
+                 // create a statement that uses the open connection to pass the query
+                 PreparedStatement ps = connection.prepareStatement("SELECT CategoryID, CategoryName FROM categories " +
+                         "ORDER BY categoryID ASC"))
+            {
+
+                try (ResultSet results = ps.executeQuery())
+                {
+                    while(results.next())
+                    {
+                        int categoryID = results.getInt("CategoryID");
+                        String categoryName = results.getString("CategoryName");
+
+                        System.out.printf("""
+                                CategoryID: %d
+                                CategoryName: %s
+                                -------------------------
+                                """, categoryID, categoryName);
+                    }
+                }
+
+
+                // prompt user to choose a categoryID to display its products
+                PreparedStatement ps2 = connection.prepareStatement("SELECT CategoryID, ProductName, UnitPrice, UnitsInStock FROM products " +
+                        "WHERE categoryID = ?");
+
+                int userDefinedCategoryID = userDefineCategorySearch();
+                ps2.setInt(1, userDefinedCategoryID);
+                
+                try (ResultSet results2 = ps2.executeQuery())
+                {
+                    while(results2.next())
+                    {
+                        int categoryID = results2.getInt("CategoryID");
+                        String productName = results2.getString("ProductName");
+                        int unitPrice = results2.getInt("UnitPrice");
+                        int unitsInStock = results2.getInt("UnitsInStock");
+
+                        System.out.printf("""
+                                CategoryID: %d
+                                Product Name: %s
+                                Unit Price: %d
+                                UnitsInStock: %d
+                                -------------------------
+                                """, userDefinedCategoryID, productName, unitPrice, unitsInStock);
+                    }
+                } catch (SQLException sql)
+                {
+                    sql.printStackTrace();
+                }
+
+
+            } catch (SQLException e)
+            {
+                e.printStackTrace();
+            }
+            
+            
+        } catch (ClassNotFoundException ex) {
+            ex.printStackTrace();
+        }
+        
+        
+    }
+    
+    private static int userDefineCategorySearch(){
+        System.out.print("Choose a CategoryID to display its products: ");
+        return s.nextInt();
+    }
+    
+    
 }
