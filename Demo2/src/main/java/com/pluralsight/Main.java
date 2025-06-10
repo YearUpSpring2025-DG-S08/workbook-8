@@ -1,11 +1,12 @@
 package com.pluralsight;
 
 
+import org.apache.commons.dbcp2.BasicDataSource;
 import java.sql.*;
 
 public class Main {
     
-    private static sqlConnectionInfo sqlConnectionInfo;
+    private static BasicDataSource basicDataSource;
     public static void main(String[] args) {
         
         if (args.length != 3) {
@@ -15,10 +16,10 @@ public class Main {
             System.exit(1);
         }
         
-        sqlConnectionInfo = getSQLConnectionInfoFromArgs(args);
+        basicDataSource = getBasicDataSourceFromArgs(args);
         
         try{
-            displayCities(103);
+            displayUserDefinedCities(103);
         } catch (Exception e){
             throw new RuntimeException(e);
         }
@@ -26,27 +27,25 @@ public class Main {
         
     }
     
-    public static sqlConnectionInfo getSQLConnectionInfoFromArgs(String[] args){
+    // this method loads the driver
+    public static BasicDataSource getBasicDataSourceFromArgs(String[] args){
         // get username and password from the command line args
         String username = args[0];
         String password = args[1];
-
         String connectionString = args[2];
         
-        return new sqlConnectionInfo(connectionString, username, password);
+        BasicDataSource result = new BasicDataSource();
+        result.setUsername(username);
+        result.setPassword(password);
+        result.setUrl(connectionString);
+
+        
+        return result;
     }
     
-    public static void displayCities(int countryID) throws ClassNotFoundException {
-            // load the MySQL driver
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        
-            
+    public static void displayUserDefinedCities(int countryID) {
             // open a connection to the database
-            // use database URL to point to correct database
-        try (Connection connection = DriverManager.getConnection(
-                sqlConnectionInfo.getConnectionString(),
-                sqlConnectionInfo.getUsername(),
-                sqlConnectionInfo.getPassword());
+        try (Connection connection = basicDataSource.getConnection();
             // create statement
             // the statement is tied to the open connection
              PreparedStatement ps = connection.prepareStatement("SELECT city FROM city WHERE country_id = ?")) 
@@ -68,5 +67,20 @@ public class Main {
         
     }
     
+    public static void displayAllCities() {
+        
+        try(Connection connection = basicDataSource.getConnection();
+        PreparedStatement ps = connection.prepareStatement("SELECT city FROM city");
+        ResultSet results = ps.executeQuery();
+        )
+        {
+            while(results.next()){
+                String city = results.getString("city");
+                System.out.println(city);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
     
 }
